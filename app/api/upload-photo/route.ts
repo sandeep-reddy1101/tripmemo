@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -86,9 +86,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Failed to save photo record' }, { status: 500 })
   }
 
-  const { data: urlData } = supabase.storage
+  const admin = createAdminClient()
+  const { data: urlData } = await admin.storage
     .from('trip-photos')
-    .getPublicUrl(storagePath)
+    .createSignedUrl(storagePath, 7 * 24 * 60 * 60)
 
-  return NextResponse.json({ photo, public_url: urlData.publicUrl })
+  return NextResponse.json({ photo, public_url: urlData?.signedUrl ?? '' })
 }

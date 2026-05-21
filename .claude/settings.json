@@ -2,6 +2,17 @@
   "permissions": {
     "allow": [
       "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir=false --import-alias=\"@/*\" --no-git)"
+    ],
+    "deny": [
+      "Read(.env)",
+      "Read(.env.local)",
+      "Read(.env*)",
+      "Edit(.env)",
+      "Edit(.env.local)",
+      "Edit(.env*)",
+      "Write(.env)",
+      "Write(.env.local)",
+      "Write(.env*)"
     ]
   }
 }

@@ -1,14 +1,15 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { generateItinerary } from '@/lib/claude'
 import { PlanTripInput } from '@/lib/types'
 
 export async function POST(request: Request) {
-  const supabase = await createClient()
+  const authClient = await createClient()
+  const supabase = createAdminClient()
 
   const {
     data: { user },
-  } = await supabase.auth.getUser()
+  } = await authClient.auth.getUser()
 
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

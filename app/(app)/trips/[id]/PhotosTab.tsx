@@ -2,8 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { TripPhoto } from '@/lib/types'
-import { createClient } from '@/lib/supabase/client'
-import { Upload, X, Camera, Loader2 } from 'lucide-react'
+import { Upload, X, Camera, Loader2, Trash2 } from 'lucide-react'
 import { getInitials } from '@/lib/utils'
 
 interface PhotosTabProps {
@@ -11,14 +10,17 @@ interface PhotosTabProps {
   photos: TripPhoto[]
   currentUserId: string
   days: number
+  onDelete: (photoId: string) => void
+  onUpload: (photo: TripPhoto) => void
 }
 
-export default function PhotosTab({ tripId, photos, currentUserId, days }: PhotosTabProps) {
+export default function PhotosTab({ tripId, photos, currentUserId, days, onDelete, onUpload }: PhotosTabProps) {
   const [uploading, setUploading] = useState(false)
   const [caption, setCaption] = useState('')
   const [dayTag, setDayTag] = useState('')
   const [lightbox, setLightbox] = useState<TripPhoto | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -43,6 +45,7 @@ export default function PhotosTab({ tripId, photos, currentUserId, days }: Photo
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Upload failed')
 
+      onUpload({ ...data.photo, public_url: data.public_url })
       setCaption('')
       setDayTag('')
       if (fileRef.current) fileRef.current.value = ''
@@ -50,6 +53,24 @@ export default function PhotosTab({ tripId, photos, currentUserId, days }: Photo
       setError(err instanceof Error ? err.message : 'Upload failed')
     } finally {
       setUploading(false)
+    }
+  }
+
+  async function handleDelete(photoId: string) {
+    setDeletingId(photoId)
+    try {
+      const res = await fetch('/api/delete-photo', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ photoId }),
+      })
+      if (!res.ok) throw new Error('Delete failed')
+      if (lightbox?.id === photoId) setLightbox(null)
+      onDelete(photoId)
+    } catch {
+      setError('Failed to delete photo')
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -143,6 +164,19 @@ export default function PhotosTab({ tripId, photos, currentUserId, days }: Photo
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               />
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors" />
+
+              {/* Delete button — only for uploader */}
+              {photo.uploaded_by === currentUserId && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleDelete(photo.id) }}
+                  disabled={deletingId === photo.id}
+                  className="absolute top-2 left-2 w-7 h-7 bg-black/50 hover:bg-red-600 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
+                >
+                  {deletingId === photo.id
+                    ? <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
+                    : <Trash2 className="w-3.5 h-3.5 text-white" />}
+                </button>
+              )}
 
               {/* Uploader avatar */}
               <div className="absolute bottom-2 left-2 flex items-center gap-1.5">

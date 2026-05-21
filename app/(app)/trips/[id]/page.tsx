@@ -1,5 +1,5 @@
 import { notFound, redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { Trip, TripMember, TripPhoto } from '@/lib/types'
 import TripPageClient from './TripPageClient'
 
@@ -49,13 +49,16 @@ export default async function TripPage({ params }: TripPageProps) {
     .eq('trip_id', id)
     .order('uploaded_at', { ascending: false })
 
-  // Get public URLs for photos
-  const photosWithUrls = (photos ?? []).map((photo) => {
-    const { data } = supabase.storage
-      .from('trip-photos')
-      .getPublicUrl(photo.storage_path)
-    return { ...photo, public_url: data.publicUrl }
-  })
+  // Generate signed URLs for photos (7-day expiry)
+  const admin = createAdminClient()
+  const photosWithUrls = await Promise.all(
+    (photos ?? []).map(async (photo) => {
+      const { data } = await admin.storage
+        .from('trip-photos')
+        .createSignedUrl(photo.storage_path, 7 * 24 * 60 * 60)
+      return { ...photo, public_url: data?.signedUrl ?? '' }
+    })
+  )
 
   return (
     <TripPageClient

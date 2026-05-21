@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { Itinerary, PlanTripInput, BrochureData } from './types'
+import { Itinerary, ItineraryDay, PlanTripInput, BrochureData } from './types'
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
@@ -93,7 +93,7 @@ Generate a complete day-by-day itinerary as JSON.`,
     throw new Error('Unexpected response type from Claude')
   }
 
-  const jsonText = content.text.trim()
+  const jsonText = content.text.trim().replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
   const parsed = JSON.parse(jsonText) as Itinerary
   return parsed
 }
@@ -133,7 +133,64 @@ Write a personal, evocative narrative for this trip brochure.`,
     throw new Error('Unexpected response type from Claude')
   }
 
-  return JSON.parse(content.text.trim()) as BrochureData
+  const brochureText = content.text.trim().replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
+  return JSON.parse(brochureText) as BrochureData
+}
+
+export async function editItinerary(itinerary: Itinerary, userPrompt: string): Promise<Itinerary> {
+  const message = await client.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 8192,
+    system: `You are a travel planner assistant helping modify a full trip itinerary.
+
+Given the current itinerary JSON and the user's requested change, return the complete modified itinerary JSON.
+
+CRITICAL:
+- Return ONLY valid JSON matching the exact same structure as the input
+- Only modify what the user explicitly asked to change — leave everything else identical
+- Preserve all day numbers, dates, and the overall structure
+- Do not include markdown code blocks or any text outside the JSON`,
+    messages: [
+      {
+        role: 'user',
+        content: `Current itinerary JSON:\n${JSON.stringify(itinerary, null, 2)}\n\nRequested change: "${userPrompt}"\n\nReturn the complete modified itinerary JSON only.`,
+      },
+    ],
+  })
+
+  const content = message.content[0]
+  if (content.type !== 'text') throw new Error('Unexpected response from Claude')
+
+  const jsonText = content.text.trim().replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
+  return JSON.parse(jsonText) as Itinerary
+}
+
+export async function editDay(day: ItineraryDay, userPrompt: string): Promise<ItineraryDay> {
+  const message = await client.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 4096,
+    system: `You are a travel planner assistant helping modify a single day of a trip itinerary.
+
+Given the current day's JSON and the user's requested change, return the modified day JSON.
+
+CRITICAL:
+- Return ONLY valid JSON matching the exact same structure as the input
+- Only modify what the user asked to change
+- Keep all other fields exactly as they are
+- Do not include markdown code blocks or any text outside the JSON`,
+    messages: [
+      {
+        role: 'user',
+        content: `Current day JSON:\n${JSON.stringify(day, null, 2)}\n\nRequested change: "${userPrompt}"\n\nReturn the modified day JSON only.`,
+      },
+    ],
+  })
+
+  const content = message.content[0]
+  if (content.type !== 'text') throw new Error('Unexpected response from Claude')
+
+  const jsonText = content.text.trim().replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
+  return JSON.parse(jsonText) as ItineraryDay
 }
 
 function calculateDayCount(startDate: string, endDate: string): number {

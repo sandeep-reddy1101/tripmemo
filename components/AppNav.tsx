@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { MapPin, LayoutDashboard, Plus, LogOut, User } from 'lucide-react'
 import { getInitials } from '@/lib/utils'
 import config from '@/lib/config'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 interface AppNavProps {
   user: { id: string; email?: string }
@@ -18,6 +18,18 @@ export default function AppNav({ user, profile }: AppNavProps) {
   const router = useRouter()
   const supabase = createClient()
   const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!menuOpen) return
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [menuOpen])
 
   async function handleSignOut() {
     await supabase.auth.signOut()
@@ -63,7 +75,7 @@ export default function AppNav({ user, profile }: AppNavProps) {
             New Trip
           </Link>
 
-          <div className="relative">
+          <div className="relative" ref={menuRef}>
             <button
               onClick={() => setMenuOpen(!menuOpen)}
               className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"

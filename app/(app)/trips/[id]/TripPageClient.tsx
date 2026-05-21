@@ -4,13 +4,15 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Trip, TripMember, TripPhoto } from '@/lib/types'
 import { formatDateRange, getDestinationGradient } from '@/lib/utils'
-import { MapPin, Calendar, Users, UserPlus, Settings, Camera, BookOpen, Map, Package, DollarSign, ChevronDown, ChevronUp } from 'lucide-react'
+import { MapPin, Calendar, Users, UserPlus, Settings, Camera, BookOpen, Map, Package, DollarSign, ChevronDown, ChevronUp, Pencil, Sparkles, Loader2, X } from 'lucide-react'
 import CollaboratorAvatars from '@/components/CollaboratorAvatars'
 import DaySelector from '@/components/DaySelector'
 import ItineraryDayComponent from '@/components/ItineraryDay'
 import PhotosTab from './PhotosTab'
 import BrochureTab from './BrochureTab'
+import DayEditor from './DayEditor'
 import { createClient } from '@/lib/supabase/client'
+import { Itinerary, ItineraryDay } from '@/lib/types'
 
 interface TripPageClientProps {
   trip: Trip
@@ -34,11 +36,56 @@ export default function TripPageClient({
   const [photos, setPhotos] = useState<TripPhoto[]>(initialPhotos)
   const [packingOpen, setPackingOpen] = useState(false)
   const [budgetOpen, setBudgetOpen] = useState(false)
+  const [itinerary, setItinerary] = useState<Itinerary | null>(trip.itinerary)
+  const [editingDay, setEditingDay] = useState<number | null>(null)
+  const [savingDay, setSavingDay] = useState(false)
+  const [planEditOpen, setPlanEditOpen] = useState(false)
+  const [planPrompt, setPlanPrompt] = useState('')
+  const [planEditing, setPlanEditing] = useState(false)
+  const [planEditError, setPlanEditError] = useState<string | null>(null)
   const supabase = createClient()
 
-  const itinerary = trip.itinerary
   const gradient = getDestinationGradient(trip.destinations ?? [])
   const currentDay = itinerary?.days.find((d) => d.day === activeDay)
+
+  async function handleSaveDay(updatedDay: ItineraryDay) {
+    if (!itinerary) return
+    setSavingDay(true)
+    const newItinerary = {
+      ...itinerary,
+      days: itinerary.days.map((d) => (d.day === updatedDay.day ? updatedDay : d)),
+    }
+    setItinerary(newItinerary)
+    setEditingDay(null)
+    await fetch(`/api/trips/${trip.id}/itinerary`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ itinerary: newItinerary }),
+    })
+    setSavingDay(false)
+  }
+
+  async function handleEditPlan() {
+    if (!planPrompt.trim() || !itinerary) return
+    setPlanEditing(true)
+    setPlanEditError(null)
+    try {
+      const res = await fetch(`/api/trips/${trip.id}/ai-edit-itinerary`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: planPrompt, currentItinerary: itinerary }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Edit failed')
+      setItinerary(data.itinerary)
+      setPlanPrompt('')
+      setPlanEditOpen(false)
+    } catch (err) {
+      setPlanEditError(err instanceof Error ? err.message : 'Edit failed')
+    } finally {
+      setPlanEditing(false)
+    }
+  }
 
   // Realtime photo updates
   useEffect(() => {
@@ -61,18 +108,19 @@ export default function TripPageClient({
             .eq('id', newPhoto.uploaded_by)
             .single()
 
-          const { data: urlData } = supabase.storage
-            .from('trip-photos')
-            .getPublicUrl(newPhoto.storage_path)
+          const signedRes = await fetch(
+            `/api/photos/signed-url?path=${encodeURIComponent(newPhoto.storage_path)}`
+          )
+          const { url: signedUrl } = signedRes.ok ? await signedRes.json() : { url: '' }
 
           const uploaderWithCreatedAt = uploader
             ? { ...uploader, created_at: '' }
             : undefined
 
-          setPhotos((prev) => [
-            { ...newPhoto, uploader: uploaderWithCreatedAt, public_url: urlData.publicUrl },
-            ...prev,
-          ])
+          setPhotos((prev) => {
+            if (prev.some((p) => p.id === newPhoto.id)) return prev
+            return [{ ...newPhoto, uploader: uploaderWithCreatedAt, public_url: signedUrl }, ...prev]
+          })
         }
       )
       .subscribe()
@@ -187,13 +235,95 @@ export default function TripPageClient({
           />
 
           <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+            {/* Edit full plan — owners only */}
+            {userRole === 'owner' && (
+              <div>
+                {!planEditOpen ? (
+                  <div className="flex justify-end">
+                    <button
+                      onClick={() => setPlanEditOpen(true)}
+                      className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-violet-600 transition-colors px-3 py-1.5 rounded-lg hover:bg-violet-50"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" /> Edit entire plan
+                    </button>
+                  </div>
+                ) : (
+                  <div className="bg-violet-50 border border-violet-200 rounded-2xl p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-semibold text-violet-700 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5" /> Edit entire plan with AI
+                      </p>
+                      <button
+                        onClick={() => { setPlanEditOpen(false); setPlanPrompt(''); setPlanEditError(null) }}
+                        className="text-violet-400 hover:text-violet-600 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <textarea
+                      value={planPrompt}
+                      onChange={(e) => setPlanPrompt(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && !planEditing) handleEditPlan()
+                      }}
+                      placeholder='e.g. "Replace Day 3 with a beach day", "Add a food tour on Day 2", "Make the whole trip more budget-friendly"'
+                      rows={3}
+                      className="w-full border border-violet-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 bg-white resize-none"
+                      disabled={planEditing}
+                    />
+                    {planEditError && (
+                      <p className="text-xs text-red-600">{planEditError}</p>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-violet-400">⌘↵ to submit</p>
+                      <button
+                        onClick={handleEditPlan}
+                        disabled={planEditing || !planPrompt.trim()}
+                        className="bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+                      >
+                        {planEditing ? (
+                          <><Loader2 className="w-4 h-4 animate-spin" /> Updating plan…</>
+                        ) : (
+                          <><Sparkles className="w-4 h-4" /> Apply changes</>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Trip summary */}
             <div className="bg-blue-50 rounded-2xl p-5 border border-blue-100">
               <p className="text-blue-800 leading-relaxed">{itinerary.summary}</p>
             </div>
 
             {/* Current day */}
-            {currentDay && <ItineraryDayComponent day={currentDay} />}
+            {currentDay && (
+              editingDay === currentDay.day ? (
+                <DayEditor
+                  day={currentDay}
+                  tripId={trip.id}
+                  onSave={handleSaveDay}
+                  onCancel={() => setEditingDay(null)}
+                  saving={savingDay}
+                />
+              ) : (
+                <div>
+                  {userRole === 'owner' && (
+                    <div className="flex justify-end mb-2">
+                      <button
+                        onClick={() => setEditingDay(currentDay.day)}
+                        className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-blue-600 transition-colors px-3 py-1.5 rounded-lg hover:bg-blue-50"
+                      >
+                        <Pencil className="w-3.5 h-3.5" /> Edit this day
+                      </button>
+                    </div>
+                  )}
+                  <ItineraryDayComponent day={currentDay} />
+                </div>
+              )
+            )}
 
             {/* Budget panel */}
             {itinerary.budget_estimate && (
@@ -293,6 +423,8 @@ export default function TripPageClient({
             photos={photos}
             currentUserId={currentUserId}
             days={itinerary?.days.length ?? 0}
+            onDelete={(photoId) => setPhotos((prev) => prev.filter((p) => p.id !== photoId))}
+            onUpload={(photo) => setPhotos((prev) => prev.some((p) => p.id === photo.id) ? prev : [photo, ...prev])}
           />
         </div>
       )}
