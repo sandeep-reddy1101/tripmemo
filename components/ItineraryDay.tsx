@@ -1,10 +1,10 @@
-import { Hotel, Utensils, Package, ChevronDown, ChevronUp } from 'lucide-react'
+import { Hotel, Utensils } from 'lucide-react'
 import { ItineraryDay as ItineraryDayType } from '@/lib/types'
 import LocationCard from './LocationCard'
-import { useState } from 'react'
 
 interface ItineraryDayProps {
   day: ItineraryDayType
+  travelTimes?: string[]
 }
 
 const mealIcons: Record<string, string> = {
@@ -13,7 +13,7 @@ const mealIcons: Record<string, string> = {
   dinner: '🍽',
 }
 
-export default function ItineraryDayComponent({ day }: ItineraryDayProps) {
+export default function ItineraryDayComponent({ day, travelTimes }: ItineraryDayProps) {
   return (
     <div className="space-y-4">
       {/* Day theme header */}
@@ -42,16 +42,23 @@ export default function ItineraryDayComponent({ day }: ItineraryDayProps) {
       </div>
 
       {/* Locations timeline */}
-      <div className="space-y-4">
+      <div>
         {day.locations.map((location, i) => (
-          <div key={i} className="relative">
-            {i < day.locations.length - 1 && (
-              <div
-                className="absolute left-8 top-full h-4 w-0.5"
-                style={{ backgroundColor: day.color + '40' }}
-              />
-            )}
+          <div key={i}>
             <LocationCard location={location} dayColor={day.color} />
+            {i < day.locations.length - 1 && (
+              <div className="relative h-8 flex items-center">
+                <div
+                  className="absolute left-8 top-0 bottom-0 w-px"
+                  style={{ backgroundColor: day.color + '40' }}
+                />
+                {travelTimes?.[i] && (
+                  <span className="absolute left-10 bg-white border border-slate-200 rounded-full px-2.5 py-0.5 text-xs text-slate-500 shadow-sm">
+                    {travelTimes[i]}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         ))}
       </div>

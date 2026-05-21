@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { Trip, TripMember, TripPhoto } from '@/lib/types'
 import { formatDateRange, getDestinationGradient } from '@/lib/utils'
-import { MapPin, Calendar, Users, UserPlus, Settings, Camera, BookOpen, Map, Package, DollarSign, ChevronDown, ChevronUp, Pencil, Sparkles, Loader2, X } from 'lucide-react'
+import { MapPin, Calendar, UserPlus, Camera, BookOpen, Map, Package, DollarSign, ChevronDown, ChevronUp, Pencil, Sparkles, Loader2, X } from 'lucide-react'
 import CollaboratorAvatars from '@/components/CollaboratorAvatars'
 import DaySelector from '@/components/DaySelector'
 import ItineraryDayComponent from '@/components/ItineraryDay'
@@ -13,6 +14,8 @@ import BrochureTab from './BrochureTab'
 import DayEditor from './DayEditor'
 import { createClient } from '@/lib/supabase/client'
 import { Itinerary, ItineraryDay } from '@/lib/types'
+
+const DayMap = dynamic(() => import('@/components/DayMap'), { ssr: false })
 
 interface TripPageClientProps {
   trip: Trip
@@ -43,10 +46,16 @@ export default function TripPageClient({
   const [planPrompt, setPlanPrompt] = useState('')
   const [planEditing, setPlanEditing] = useState(false)
   const [planEditError, setPlanEditError] = useState<string | null>(null)
+  const [travelTimes, setTravelTimes] = useState<string[]>([])
   const supabase = createClient()
 
   const gradient = getDestinationGradient(trip.destinations ?? [])
   const currentDay = itinerary?.days.find((d) => d.day === activeDay)
+
+  // Clear stale travel times whenever the selected day changes
+  useEffect(() => {
+    setTravelTimes([])
+  }, [activeDay])
 
   async function handleSaveDay(updatedDay: ItineraryDay) {
     if (!itinerary) return
@@ -234,177 +243,201 @@ export default function TripPageClient({
             onSelect={setActiveDay}
           />
 
-          <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-            {/* Edit full plan — owners only */}
-            {userRole === 'owner' && (
-              <div>
-                {!planEditOpen ? (
-                  <div className="flex justify-end">
-                    <button
-                      onClick={() => setPlanEditOpen(true)}
-                      className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-violet-600 transition-colors px-3 py-1.5 rounded-lg hover:bg-violet-50"
-                    >
-                      <Sparkles className="w-3.5 h-3.5" /> Edit entire plan
-                    </button>
-                  </div>
-                ) : (
-                  <div className="bg-violet-50 border border-violet-200 rounded-2xl p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-semibold text-violet-700 flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5" /> Edit entire plan with AI
-                      </p>
-                      <button
-                        onClick={() => { setPlanEditOpen(false); setPlanPrompt(''); setPlanEditError(null) }}
-                        className="text-violet-400 hover:text-violet-600 transition-colors"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
+          {/* Day editor — full width when active */}
+          {currentDay && editingDay === currentDay.day ? (
+            <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              <DayEditor
+                day={currentDay}
+                tripId={trip.id}
+                onSave={handleSaveDay}
+                onCancel={() => setEditingDay(null)}
+                saving={savingDay}
+              />
+            </div>
+          ) : (
+            /* Two-column layout: itinerary left, map right */
+            <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              <div className="flex gap-8 items-start">
+
+                {/* Left column — itinerary */}
+                <div className="flex-1 min-w-0 space-y-6">
+                  {/* Edit full plan — owners only */}
+                  {userRole === 'owner' && (
+                    <div>
+                      {!planEditOpen ? (
+                        <div className="flex justify-end">
+                          <button
+                            onClick={() => setPlanEditOpen(true)}
+                            className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-violet-600 transition-colors px-3 py-1.5 rounded-lg hover:bg-violet-50"
+                          >
+                            <Sparkles className="w-3.5 h-3.5" /> Edit entire plan
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="bg-violet-50 border border-violet-200 rounded-2xl p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs font-semibold text-violet-700 flex items-center gap-1.5">
+                              <Sparkles className="w-3.5 h-3.5" /> Edit entire plan with AI
+                            </p>
+                            <button
+                              onClick={() => { setPlanEditOpen(false); setPlanPrompt(''); setPlanEditError(null) }}
+                              className="text-violet-400 hover:text-violet-600 transition-colors"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                          <textarea
+                            value={planPrompt}
+                            onChange={(e) => setPlanPrompt(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && !planEditing) handleEditPlan()
+                            }}
+                            placeholder='e.g. "Replace Day 3 with a beach day", "Add a food tour on Day 2", "Make the whole trip more budget-friendly"'
+                            rows={3}
+                            className="w-full border border-violet-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 bg-white resize-none"
+                            disabled={planEditing}
+                          />
+                          {planEditError && (
+                            <p className="text-xs text-red-600">{planEditError}</p>
+                          )}
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs text-violet-400">⌘↵ to submit</p>
+                            <button
+                              onClick={handleEditPlan}
+                              disabled={planEditing || !planPrompt.trim()}
+                              className="bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+                            >
+                              {planEditing ? (
+                                <><Loader2 className="w-4 h-4 animate-spin" /> Updating plan…</>
+                              ) : (
+                                <><Sparkles className="w-4 h-4" /> Apply changes</>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <textarea
-                      value={planPrompt}
-                      onChange={(e) => setPlanPrompt(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && !planEditing) handleEditPlan()
-                      }}
-                      placeholder='e.g. "Replace Day 3 with a beach day", "Add a food tour on Day 2", "Make the whole trip more budget-friendly"'
-                      rows={3}
-                      className="w-full border border-violet-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 bg-white resize-none"
-                      disabled={planEditing}
-                    />
-                    {planEditError && (
-                      <p className="text-xs text-red-600">{planEditError}</p>
-                    )}
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs text-violet-400">⌘↵ to submit</p>
+                  )}
+
+                  {/* Trip summary */}
+                  <div className="bg-blue-50 rounded-2xl p-5 border border-blue-100">
+                    <p className="text-blue-800 leading-relaxed">{itinerary.summary}</p>
+                  </div>
+
+                  {/* Current day */}
+                  {currentDay && (
+                    <div>
+                      {userRole === 'owner' && (
+                        <div className="flex justify-end mb-2">
+                          <button
+                            onClick={() => setEditingDay(currentDay.day)}
+                            className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-blue-600 transition-colors px-3 py-1.5 rounded-lg hover:bg-blue-50"
+                          >
+                            <Pencil className="w-3.5 h-3.5" /> Edit this day
+                          </button>
+                        </div>
+                      )}
+                      <ItineraryDayComponent day={currentDay} travelTimes={travelTimes} />
+                    </div>
+                  )}
+
+                  {/* Budget panel */}
+                  {itinerary.budget_estimate && (
+                    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
                       <button
-                        onClick={handleEditPlan}
-                        disabled={planEditing || !planPrompt.trim()}
-                        className="bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+                        onClick={() => setBudgetOpen(!budgetOpen)}
+                        className="flex items-center justify-between w-full px-5 py-4 text-left"
                       >
-                        {planEditing ? (
-                          <><Loader2 className="w-4 h-4 animate-spin" /> Updating plan…</>
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 bg-emerald-100 rounded-xl flex items-center justify-center">
+                            <DollarSign className="w-5 h-5 text-emerald-600" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-slate-900">Budget Estimate</p>
+                            <p className="text-sm text-slate-500">
+                              ${itinerary.budget_estimate.low}–${itinerary.budget_estimate.high}{' '}
+                              {itinerary.budget_estimate.currency}
+                            </p>
+                          </div>
+                        </div>
+                        {budgetOpen ? (
+                          <ChevronUp className="w-5 h-5 text-slate-400" />
                         ) : (
-                          <><Sparkles className="w-4 h-4" /> Apply changes</>
+                          <ChevronDown className="w-5 h-5 text-slate-400" />
                         )}
                       </button>
+                      {budgetOpen && (
+                        <div className="px-5 pb-5 border-t border-slate-100">
+                          <div className="grid grid-cols-2 gap-4 mt-4">
+                            <div className="bg-slate-50 rounded-xl p-4">
+                              <p className="text-xs text-slate-500 font-medium">Low estimate</p>
+                              <p className="text-2xl font-bold text-slate-900 mt-1">
+                                ${itinerary.budget_estimate.low}
+                              </p>
+                            </div>
+                            <div className="bg-slate-50 rounded-xl p-4">
+                              <p className="text-xs text-slate-500 font-medium">High estimate</p>
+                              <p className="text-2xl font-bold text-slate-900 mt-1">
+                                ${itinerary.budget_estimate.high}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
-              </div>
-            )}
+                  )}
 
-            {/* Trip summary */}
-            <div className="bg-blue-50 rounded-2xl p-5 border border-blue-100">
-              <p className="text-blue-800 leading-relaxed">{itinerary.summary}</p>
-            </div>
-
-            {/* Current day */}
-            {currentDay && (
-              editingDay === currentDay.day ? (
-                <DayEditor
-                  day={currentDay}
-                  tripId={trip.id}
-                  onSave={handleSaveDay}
-                  onCancel={() => setEditingDay(null)}
-                  saving={savingDay}
-                />
-              ) : (
-                <div>
-                  {userRole === 'owner' && (
-                    <div className="flex justify-end mb-2">
+                  {/* Packing tips */}
+                  {itinerary.packing_tips && itinerary.packing_tips.length > 0 && (
+                    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
                       <button
-                        onClick={() => setEditingDay(currentDay.day)}
-                        className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-blue-600 transition-colors px-3 py-1.5 rounded-lg hover:bg-blue-50"
+                        onClick={() => setPackingOpen(!packingOpen)}
+                        className="flex items-center justify-between w-full px-5 py-4 text-left"
                       >
-                        <Pencil className="w-3.5 h-3.5" /> Edit this day
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 bg-violet-100 rounded-xl flex items-center justify-center">
+                            <Package className="w-5 h-5 text-violet-600" />
+                          </div>
+                          <p className="font-semibold text-slate-900">Packing Tips</p>
+                        </div>
+                        {packingOpen ? (
+                          <ChevronUp className="w-5 h-5 text-slate-400" />
+                        ) : (
+                          <ChevronDown className="w-5 h-5 text-slate-400" />
+                        )}
                       </button>
+                      {packingOpen && (
+                        <div className="px-5 pb-5 border-t border-slate-100">
+                          <ul className="mt-4 space-y-2">
+                            {itinerary.packing_tips.map((tip, i) => (
+                              <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
+                                <span className="text-violet-500 mt-0.5 flex-shrink-0">✓</span>
+                                {tip}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </div>
                   )}
-                  <ItineraryDayComponent day={currentDay} />
                 </div>
-              )
-            )}
 
-            {/* Budget panel */}
-            {itinerary.budget_estimate && (
-              <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-                <button
-                  onClick={() => setBudgetOpen(!budgetOpen)}
-                  className="flex items-center justify-between w-full px-5 py-4 text-left"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 bg-emerald-100 rounded-xl flex items-center justify-center">
-                      <DollarSign className="w-5 h-5 text-emerald-600" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-slate-900">Budget Estimate</p>
-                      <p className="text-sm text-slate-500">
-                        ${itinerary.budget_estimate.low}–${itinerary.budget_estimate.high}{' '}
-                        {itinerary.budget_estimate.currency}
-                      </p>
-                    </div>
-                  </div>
-                  {budgetOpen ? (
-                    <ChevronUp className="w-5 h-5 text-slate-400" />
-                  ) : (
-                    <ChevronDown className="w-5 h-5 text-slate-400" />
-                  )}
-                </button>
-                {budgetOpen && (
-                  <div className="px-5 pb-5 border-t border-slate-100">
-                    <div className="grid grid-cols-2 gap-4 mt-4">
-                      <div className="bg-slate-50 rounded-xl p-4">
-                        <p className="text-xs text-slate-500 font-medium">Low estimate</p>
-                        <p className="text-2xl font-bold text-slate-900 mt-1">
-                          ${itinerary.budget_estimate.low}
-                        </p>
-                      </div>
-                      <div className="bg-slate-50 rounded-xl p-4">
-                        <p className="text-xs text-slate-500 font-medium">High estimate</p>
-                        <p className="text-2xl font-bold text-slate-900 mt-1">
-                          ${itinerary.budget_estimate.high}
-                        </p>
-                      </div>
+                {/* Right column — sticky map */}
+                {currentDay && (
+                  <div className="hidden lg:block w-[460px] flex-shrink-0">
+                    <div className="sticky top-[120px]">
+                      <DayMap
+                        day={currentDay}
+                        onTravelTimes={setTravelTimes}
+                        mapHeight="h-[calc(100vh-200px)]"
+                      />
                     </div>
                   </div>
                 )}
-              </div>
-            )}
 
-            {/* Packing tips */}
-            {itinerary.packing_tips && itinerary.packing_tips.length > 0 && (
-              <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-                <button
-                  onClick={() => setPackingOpen(!packingOpen)}
-                  className="flex items-center justify-between w-full px-5 py-4 text-left"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 bg-violet-100 rounded-xl flex items-center justify-center">
-                      <Package className="w-5 h-5 text-violet-600" />
-                    </div>
-                    <p className="font-semibold text-slate-900">Packing Tips</p>
-                  </div>
-                  {packingOpen ? (
-                    <ChevronUp className="w-5 h-5 text-slate-400" />
-                  ) : (
-                    <ChevronDown className="w-5 h-5 text-slate-400" />
-                  )}
-                </button>
-                {packingOpen && (
-                  <div className="px-5 pb-5 border-t border-slate-100">
-                    <ul className="mt-4 space-y-2">
-                      {itinerary.packing_tips.map((tip, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
-                          <span className="text-violet-500 mt-0.5 flex-shrink-0">✓</span>
-                          {tip}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </>
       )}
 
