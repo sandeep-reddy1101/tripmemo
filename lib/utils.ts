@@ -63,13 +63,14 @@ export function getMapsDirectionsUrl(query: string): string {
 
 export function getDestinationGradient(destinations: string[]): string {
   const gradients = [
-    'from-emerald-400 via-teal-500 to-cyan-600',
-    'from-violet-500 via-purple-500 to-indigo-600',
-    'from-orange-400 via-amber-500 to-yellow-500',
-    'from-pink-400 via-rose-500 to-red-500',
-    'from-blue-400 via-sky-500 to-cyan-500',
+    'from-amber-500 via-orange-500 to-red-600',      // Desert sunset
+    'from-teal-500 via-emerald-500 to-green-600',    // Tropical jungle
+    'from-sky-500 via-cyan-500 to-teal-600',         // Ocean coast
+    'from-rose-500 via-pink-500 to-orange-500',      // Sakura / warm dusk
+    'from-amber-400 via-yellow-500 to-orange-500',   // Golden savanna
+    'from-emerald-600 via-teal-600 to-cyan-700',     // Deep rainforest
   ]
-  const index = destinations.length % gradients.length
+  const index = (destinations.join('').length) % gradients.length
   return gradients[index]
 }
 

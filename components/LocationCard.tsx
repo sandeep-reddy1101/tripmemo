@@ -12,7 +12,7 @@ export default function LocationCard({ location, dayColor }: LocationCardProps) 
   const mapsUrl = getMapsDirectionsUrl(location.maps_query)
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+    <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
       <div className="flex">
         {/* Color accent bar */}
         <div className="w-1.5 flex-shrink-0" style={{ backgroundColor: dayColor }} />
@@ -23,15 +23,13 @@ export default function LocationCard({ location, dayColor }: LocationCardProps) 
             <div className="flex items-start gap-3">
               <span className="text-2xl flex-shrink-0 mt-0.5">{categoryIcon}</span>
               <div>
-                <h3 className="font-bold text-slate-900 text-base leading-tight">
-                  {location.name}
-                </h3>
+                <h3 className="font-bold text-stone-900 text-base leading-tight">{location.name}</h3>
                 <div className="flex items-center flex-wrap gap-3 mt-1">
-                  <span className="flex items-center gap-1 text-xs text-slate-500">
+                  <span className="flex items-center gap-1 text-xs text-stone-500">
                     <Clock className="w-3.5 h-3.5" />
                     {location.time} · {location.duration}
                   </span>
-                  <span className="flex items-center gap-1 text-xs text-slate-500">
+                  <span className="flex items-center gap-1 text-xs text-stone-500">
                     <DollarSign className="w-3.5 h-3.5" />
                     {location.cost_estimate}
                   </span>
@@ -48,13 +46,13 @@ export default function LocationCard({ location, dayColor }: LocationCardProps) 
           </div>
 
           {/* Description */}
-          <p className="text-slate-600 text-sm leading-relaxed mb-3">{location.description}</p>
+          <p className="text-stone-600 text-sm leading-relaxed mb-3">{location.description}</p>
 
           {/* Tips */}
           {location.tips && (
-            <div className="flex items-start gap-2 bg-blue-50 rounded-xl px-3 py-2.5 mb-3">
-              <Info className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
-              <p className="text-blue-700 text-xs leading-relaxed">{location.tips}</p>
+            <div className="flex items-start gap-2 bg-amber-50 rounded-xl px-3 py-2.5 mb-3 border border-amber-100">
+              <Info className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+              <p className="text-amber-800 text-xs leading-relaxed">{location.tips}</p>
             </div>
           )}
 

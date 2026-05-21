@@ -7,6 +7,12 @@ interface ItineraryDayProps {
   travelTimes?: string[]
 }
 
+const mealLabels: Record<string, string> = {
+  breakfast: 'Breakfast',
+  lunch: 'Lunch',
+  dinner: 'Dinner',
+}
+
 const mealIcons: Record<string, string> = {
   breakfast: '☕',
   lunch: '🥗',
@@ -17,24 +23,21 @@ export default function ItineraryDayComponent({ day, travelTimes }: ItineraryDay
   return (
     <div className="space-y-4">
       {/* Day theme header */}
-      <div
-        className="rounded-2xl px-6 py-4 text-white"
-        style={{ backgroundColor: day.color }}
-      >
+      <div className="rounded-2xl px-6 py-5 text-white" style={{ backgroundColor: day.color }}>
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-white/70 text-sm font-medium">Day {day.day}</p>
-            <h2 className="text-2xl font-bold mt-0.5">{day.theme}</h2>
+            <p className="text-white/60 text-xs font-semibold uppercase tracking-wider">Day {day.day}</p>
+            <h2 className="text-2xl font-bold mt-1">{day.theme}</h2>
           </div>
           <div className="text-right">
-            <p className="text-white/70 text-xs">
+            <p className="text-white/60 text-xs">
               {new Date(day.date).toLocaleDateString('en-US', {
                 weekday: 'long',
                 month: 'long',
                 day: 'numeric',
               })}
             </p>
-            <p className="text-white text-sm font-medium mt-1">
+            <p className="text-white/90 text-sm font-medium mt-1.5">
               {day.locations.length} stop{day.locations.length !== 1 ? 's' : ''}
             </p>
           </div>
@@ -53,7 +56,7 @@ export default function ItineraryDayComponent({ day, travelTimes }: ItineraryDay
                   style={{ backgroundColor: day.color + '40' }}
                 />
                 {travelTimes?.[i] && (
-                  <span className="absolute left-10 bg-white border border-slate-200 rounded-full px-2.5 py-0.5 text-xs text-slate-500 shadow-sm">
+                  <span className="absolute left-10 bg-white border border-stone-200 rounded-full px-2.5 py-0.5 text-xs text-stone-500 shadow-sm">
                     {travelTimes[i]}
                   </span>
                 )}
@@ -65,24 +68,24 @@ export default function ItineraryDayComponent({ day, travelTimes }: ItineraryDay
 
       {/* Meals section */}
       {day.meals && day.meals.length > 0 && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+        <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
-            <Utensils className="w-4 h-4 text-slate-500" />
-            <h3 className="font-semibold text-slate-700">Meals</h3>
+            <Utensils className="w-4 h-4 text-stone-400" />
+            <h3 className="font-semibold text-stone-700">Meals</h3>
           </div>
           <div className="space-y-3">
             {day.meals.map((meal, i) => (
               <div key={i} className="flex items-center gap-3">
                 <span className="text-xl">{mealIcons[meal.type] ?? '🍴'}</span>
                 <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                    {meal.type}
+                  <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide">
+                    {mealLabels[meal.type] ?? meal.type}
                   </p>
                   <a
                     href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(meal.maps_query)}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm text-slate-700 hover:text-blue-600 font-medium"
+                    className="text-sm text-stone-700 hover:text-amber-600 font-medium transition-colors"
                   >
                     {meal.suggestion}
                   </a>
@@ -104,9 +107,9 @@ export default function ItineraryDayComponent({ day, travelTimes }: ItineraryDay
               <Hotel className="w-5 h-5 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white/70 text-xs font-medium mb-0.5">TONIGHT&apos;S STAY</p>
+              <p className="text-white/60 text-xs font-semibold uppercase tracking-wider mb-0.5">Tonight&apos;s stay</p>
               <h3 className="font-bold text-lg leading-tight">{day.stay.name}</h3>
-              <p className="text-white/80 text-sm mt-0.5">{day.stay.address}</p>
+              <p className="text-white/75 text-sm mt-0.5">{day.stay.address}</p>
               <div className="flex items-center gap-4 mt-3">
                 <span className="text-white/90 text-sm font-medium">{day.stay.cost_estimate}</span>
                 {day.stay.booking_url && day.stay.booking_url !== '#' && (
