@@ -14,11 +14,11 @@ const sizeClasses = {
 }
 
 const gradients = [
-  'from-blue-500 to-violet-500',
-  'from-emerald-500 to-teal-500',
-  'from-orange-500 to-amber-500',
-  'from-pink-500 to-rose-500',
-  'from-cyan-500 to-blue-500',
+  'from-amber-500 to-orange-600',
+  'from-teal-500 to-emerald-600',
+  'from-rose-500 to-pink-600',
+  'from-sky-500 to-blue-600',
+  'from-violet-500 to-purple-600',
 ]
 
 export default function CollaboratorAvatars({
@@ -28,7 +28,7 @@ export default function CollaboratorAvatars({
 }: CollaboratorAvatarsProps) {
   if (!members || members.length === 0) {
     return (
-      <div className="flex items-center gap-1 text-slate-400">
+      <div className="flex items-center gap-1 text-stone-400">
         <Users className="w-4 h-4" />
         <span className="text-xs">Just you</span>
       </div>
@@ -49,14 +49,10 @@ export default function CollaboratorAvatars({
             <div
               key={member.id}
               title={name}
-              className={`${sizeClasses[size]} rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center text-white font-bold border-2 border-white`}
+              className={`${sizeClasses[size]} rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center text-white font-bold border-2 border-white overflow-hidden`}
             >
               {member.user?.avatar_url ? (
-                <img
-                  src={member.user.avatar_url}
-                  alt={name}
-                  className="w-full h-full rounded-full object-cover"
-                />
+                <img src={member.user.avatar_url} alt={name} className="w-full h-full object-cover" />
               ) : (
                 getInitials(name)
               )}
@@ -64,17 +60,13 @@ export default function CollaboratorAvatars({
           )
         })}
         {overflow > 0 && (
-          <div
-            className={`${sizeClasses[size]} rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-bold border-2 border-white`}
-          >
+          <div className={`${sizeClasses[size]} rounded-full bg-stone-100 flex items-center justify-center text-stone-500 font-bold border-2 border-white text-xs`}>
             +{overflow}
           </div>
         )}
       </div>
       {members.length === 1 && (
-        <span className="ml-2 text-xs text-slate-500">
-          {members[0].user?.full_name ?? 'Solo trip'}
-        </span>
+        <span className="ml-2 text-xs text-stone-500">{members[0].user?.full_name ?? 'Solo trip'}</span>
       )}
     </div>
   )

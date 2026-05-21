@@ -147,65 +147,69 @@ export default function TripPageClient({
 
   return (
     <div className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-8">
-      {/* Hero Banner */}
-      <div className={`relative h-64 sm:h-80 bg-gradient-to-br ${gradient} overflow-hidden`}>
-        {trip.cover_image_url && (
-          <img
-            src={trip.cover_image_url}
-            alt={trip.title}
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-        )}
-        <div className="absolute inset-0 bg-black/40" />
+      {/* Trip Header */}
+      <div className="bg-white border-b border-stone-100">
+        {/* Gradient accent strip */}
+        <div className={`h-1 bg-gradient-to-r ${gradient}`} />
 
-        {/* Hero content */}
-        <div className="absolute inset-0 flex flex-col justify-end p-6 sm:p-8 max-w-7xl mx-auto">
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6">
+          <div className="flex items-start gap-4 sm:gap-5">
+            {/* Cover thumbnail */}
+            {trip.cover_image_url && (
+              <div className="hidden sm:block flex-shrink-0">
+                <img
+                  src={trip.cover_image_url}
+                  alt={trip.title}
+                  className="w-16 h-16 rounded-xl object-cover ring-1 ring-stone-200 shadow-sm"
+                />
+              </div>
+            )}
+
+            {/* Title + meta */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1.5">
                 <span
-                  className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                  className={`inline-flex text-xs font-semibold px-2 py-0.5 rounded-md ring-1 ${
                     trip.status === 'active'
-                      ? 'bg-green-500/80 text-white'
+                      ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
                       : trip.status === 'completed'
-                      ? 'bg-white/20 text-white'
-                      : 'bg-amber-500/80 text-white'
+                      ? 'bg-stone-100 text-stone-600 ring-stone-200'
+                      : 'bg-amber-50 text-amber-700 ring-amber-200'
                   }`}
                 >
                   {trip.status.charAt(0).toUpperCase() + trip.status.slice(1)}
                 </span>
               </div>
-              <h1 className="text-3xl sm:text-4xl font-bold text-white drop-shadow-lg">
+              <h1 className="text-2xl sm:text-3xl font-bold text-stone-900 leading-tight tracking-tight">
                 {trip.title}
               </h1>
-              <div className="flex items-center flex-wrap gap-4 mt-2 text-white/80 text-sm">
+              <div className="flex items-center flex-wrap gap-4 mt-2 text-stone-500 text-sm">
                 {trip.destinations && trip.destinations.length > 0 && (
                   <span className="flex items-center gap-1.5">
-                    <MapPin className="w-4 h-4" />
+                    <MapPin className="w-3.5 h-3.5 text-stone-400" />
                     {trip.destinations.join(' → ')}
                   </span>
                 )}
                 {trip.start_date && trip.end_date && (
                   <span className="flex items-center gap-1.5">
-                    <Calendar className="w-4 h-4" />
+                    <Calendar className="w-3.5 h-3.5 text-stone-400" />
                     {formatDateRange(trip.start_date, trip.end_date)}
                   </span>
                 )}
               </div>
             </div>
 
-            <div className="flex flex-col items-end gap-3 flex-shrink-0">
+            {/* Collaborators + invite */}
+            <div className="flex items-center gap-3 flex-shrink-0">
               <CollaboratorAvatars members={members} maxVisible={4} size="md" />
               {userRole === 'owner' && (
-                <div className="flex items-center gap-2">
-                  <Link
-                    href={`/trips/${trip.id}/invite`}
-                    className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
-                  >
-                    <UserPlus className="w-3.5 h-3.5" />
-                    Invite
-                  </Link>
-                </div>
+                <Link
+                  href={`/trips/${trip.id}/invite`}
+                  className="flex items-center gap-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  Invite
+                </Link>
               )}
             </div>
           </div>
@@ -213,7 +217,7 @@ export default function TripPageClient({
       </div>
 
       {/* Tab Bar */}
-      <div className="bg-white border-b border-slate-200 sticky top-16 z-30">
+      <div className="bg-white border-b border-stone-200 sticky top-16 z-30 shadow-sm shadow-stone-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex gap-1">
             {tabs.map((tab) => (
@@ -222,8 +226,8 @@ export default function TripPageClient({
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-4 py-4 text-sm font-semibold border-b-2 transition-colors ${
                   activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-slate-500 hover:text-slate-700'
+                    ? 'border-amber-500 text-amber-700'
+                    : 'border-transparent text-stone-500 hover:text-stone-700'
                 }`}
               >
                 <tab.icon className="w-4 h-4" />
@@ -268,20 +272,20 @@ export default function TripPageClient({
                         <div className="flex justify-end">
                           <button
                             onClick={() => setPlanEditOpen(true)}
-                            className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-violet-600 transition-colors px-3 py-1.5 rounded-lg hover:bg-violet-50"
+                            className="flex items-center gap-1.5 text-xs font-semibold text-stone-500 hover:text-amber-700 transition-colors px-3 py-1.5 rounded-lg hover:bg-amber-50"
                           >
                             <Sparkles className="w-3.5 h-3.5" /> Edit entire plan
                           </button>
                         </div>
                       ) : (
-                        <div className="bg-violet-50 border border-violet-200 rounded-2xl p-4 space-y-3">
+                        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-3">
                           <div className="flex items-center justify-between">
-                            <p className="text-xs font-semibold text-violet-700 flex items-center gap-1.5">
+                            <p className="text-xs font-semibold text-amber-800 flex items-center gap-1.5">
                               <Sparkles className="w-3.5 h-3.5" /> Edit entire plan with AI
                             </p>
                             <button
                               onClick={() => { setPlanEditOpen(false); setPlanPrompt(''); setPlanEditError(null) }}
-                              className="text-violet-400 hover:text-violet-600 transition-colors"
+                              className="text-amber-400 hover:text-amber-600 transition-colors"
                             >
                               <X className="w-4 h-4" />
                             </button>
@@ -294,18 +298,18 @@ export default function TripPageClient({
                             }}
                             placeholder='e.g. "Replace Day 3 with a beach day", "Add a food tour on Day 2", "Make the whole trip more budget-friendly"'
                             rows={3}
-                            className="w-full border border-violet-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 bg-white resize-none"
+                            className="w-full border border-amber-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white resize-none"
                             disabled={planEditing}
                           />
                           {planEditError && (
                             <p className="text-xs text-red-600">{planEditError}</p>
                           )}
                           <div className="flex items-center justify-between">
-                            <p className="text-xs text-violet-400">⌘↵ to submit</p>
+                            <p className="text-xs text-amber-500">⌘↵ to submit</p>
                             <button
                               onClick={handleEditPlan}
                               disabled={planEditing || !planPrompt.trim()}
-                              className="bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+                              className="bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
                             >
                               {planEditing ? (
                                 <><Loader2 className="w-4 h-4 animate-spin" /> Updating plan…</>
@@ -320,8 +324,8 @@ export default function TripPageClient({
                   )}
 
                   {/* Trip summary */}
-                  <div className="bg-blue-50 rounded-2xl p-5 border border-blue-100">
-                    <p className="text-blue-800 leading-relaxed">{itinerary.summary}</p>
+                  <div className="bg-amber-50 rounded-2xl p-5 border border-amber-100">
+                    <p className="text-amber-900 leading-relaxed">{itinerary.summary}</p>
                   </div>
 
                   {/* Current day */}
@@ -331,7 +335,7 @@ export default function TripPageClient({
                         <div className="flex justify-end mb-2">
                           <button
                             onClick={() => setEditingDay(currentDay.day)}
-                            className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-blue-600 transition-colors px-3 py-1.5 rounded-lg hover:bg-blue-50"
+                            className="flex items-center gap-1.5 text-xs font-semibold text-stone-500 hover:text-amber-700 transition-colors px-3 py-1.5 rounded-lg hover:bg-amber-50"
                           >
                             <Pencil className="w-3.5 h-3.5" /> Edit this day
                           </button>
@@ -343,7 +347,7 @@ export default function TripPageClient({
 
                   {/* Budget panel */}
                   {itinerary.budget_estimate && (
-                    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                    <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-sm">
                       <button
                         onClick={() => setBudgetOpen(!budgetOpen)}
                         className="flex items-center justify-between w-full px-5 py-4 text-left"
@@ -367,15 +371,15 @@ export default function TripPageClient({
                         )}
                       </button>
                       {budgetOpen && (
-                        <div className="px-5 pb-5 border-t border-slate-100">
+                        <div className="px-5 pb-5 border-t border-stone-100">
                           <div className="grid grid-cols-2 gap-4 mt-4">
-                            <div className="bg-slate-50 rounded-xl p-4">
+                            <div className="bg-stone-50 rounded-xl p-4">
                               <p className="text-xs text-slate-500 font-medium">Low estimate</p>
                               <p className="text-2xl font-bold text-slate-900 mt-1">
                                 ${itinerary.budget_estimate.low}
                               </p>
                             </div>
-                            <div className="bg-slate-50 rounded-xl p-4">
+                            <div className="bg-stone-50 rounded-xl p-4">
                               <p className="text-xs text-slate-500 font-medium">High estimate</p>
                               <p className="text-2xl font-bold text-slate-900 mt-1">
                                 ${itinerary.budget_estimate.high}
@@ -389,7 +393,7 @@ export default function TripPageClient({
 
                   {/* Packing tips */}
                   {itinerary.packing_tips && itinerary.packing_tips.length > 0 && (
-                    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                    <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-sm">
                       <button
                         onClick={() => setPackingOpen(!packingOpen)}
                         className="flex items-center justify-between w-full px-5 py-4 text-left"
@@ -407,11 +411,11 @@ export default function TripPageClient({
                         )}
                       </button>
                       {packingOpen && (
-                        <div className="px-5 pb-5 border-t border-slate-100">
+                        <div className="px-5 pb-5 border-t border-stone-100">
                           <ul className="mt-4 space-y-2">
                             {itinerary.packing_tips.map((tip, i) => (
-                              <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
-                                <span className="text-violet-500 mt-0.5 flex-shrink-0">✓</span>
+                              <li key={i} className="flex items-start gap-2 text-sm text-stone-600">
+                                <span className="text-amber-500 mt-0.5 flex-shrink-0">✓</span>
                                 {tip}
                               </li>
                             ))}
